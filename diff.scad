@@ -14,36 +14,42 @@ box_height=40;          // height of box
 diffgear_y_offset=-5; // y offset from center of differential gear's axle
 diffaxle_z_offset=21; // z offset (height) of differential gear's axle
 
+knob_y_offset=7;
 
 
 module flat_gear(radius=6, teeth=12) {
-       gear (
-       	    number_of_teeth=teeth,
-    	    circular_pitch=radius*6.28/teeth,
-            diametral_pitch=false,
-            pressure_angle=28,
-            clearance = 0.2,
-    gear_thickness=4,
-    rim_thickness=4,
-    rim_width=0,
-    hub_thickness=2,
-    hub_diameter=0,
-    bore_diameter=4.4,
-    circles=0,
-    backlash=0,
-    twist=0,
-    involute_facets=0,
-    flat=false);
+    gear (number_of_teeth=teeth,
+    	  circular_pitch=radius*360/teeth,
+          diametral_pitch=false,
+          pressure_angle=28,
+          clearance = 0.2,
+          gear_thickness=4,
+          rim_thickness=4,
+          rim_width=0,
+          hub_thickness=2,
+          hub_diameter=0,
+          bore_diameter=0,
+          circles=0,
+          backlash=0,
+          twist=0,
+          involute_facets=0,
+          flat=false);
 }
 
 // a pair of medium flat gears mesh at distance 24
 module flat_gear_medium() {
-    flat_gear(radius=6, teeth=12);
+    difference() {        
+        flat_gear(radius=6, teeth=12);
+        cylinder($fn=6, r=2.2, h=10);
+    }
 }
 
 module flat_gear_medium_handle() {
+    knob_hole_axle_height=5;
     flat_gear(radius=6, teeth=12);
-    cylinder($fn=40,r=knob_axle_radius,h=10);
+//    cylinder($fn=40,r=knob_axle_radius,h=10);
+    cylinder($fn=40,r=knob_axle_radius,h=4+3);
+    cylinder($fn=6,r=knob_axle_radius,h=4+3+knob_hole_axle_height);
 }
 
 
@@ -53,12 +59,18 @@ module flat_gear_small() {
 }
 
 module flat_gear_large() {
-    flat_gear(teeth=14, radius=7);
+    difference() {
+        flat_gear(teeth=14, radius=7);
+        cylinder($fn=6, r=2.2, h=10);
+    }
 }
 
+
 module flat_gear_large_handle() {
+    knob_hole_axle_height=5;
     flat_gear(teeth=14, radius=7);
-    cylinder($fn=40,r=knob_axle_radius,h=10);
+    cylinder($fn=40,r=knob_axle_radius,h=4+3);
+    cylinder($fn=6,r=knob_axle_radius,h=4+3+knob_hole_axle_height);
 }
 
 // differential gears are encased into a sphere of radius diffgear_inner_radius
@@ -97,7 +109,9 @@ module diff_gear_outside() {
     handleheight=8;
     rotate([180,0,0]) {
         diff_gear();
-        translate([0,0,-handleheight]) cylinder($fn=30,r=diffgear_axle_radius, h=handleheight+1);
+        translate([0,0,-4]) cylinder($fn=30,r=diffgear_axle_radius, h=handleheight+1-4);
+        translate([0,0,-handleheight]) cylinder($fn=6,r=diffgear_axle_radius, h=handleheight+1);
+        
     }
 }
 
@@ -138,6 +152,7 @@ module diff_halfcupola() {
 // belt around the differential gear
 // cupolaradius = outer radius of differential gear's cupola
 // beltradius = outer dimensions of belt itself
+// TODO needs numbers on it.
 // ----------------------------------------
 
 module diff_belt() {
@@ -152,6 +167,8 @@ module diff_belt() {
         }
     }
 }
+
+// housing. has holes in it for the handles
 
 module housing_bottom() {
     slack=0.1;
@@ -180,9 +197,13 @@ module housing_bottom() {
         }
     }}
     // button to limit knob movement
-    translate([box_side/2+1,knob_y_offset,20+7]) sphere($fn=30, r=1.5,center=true);
-    translate([-(box_side/2+1),knob_y_offset,20+7]) sphere($fn=30, r=1.5,center=true);
+    // didn't work ot so disabled
+    //    translate([box_side/2+1,knob_y_offset,20+7]) sphere($fn=30, r=1.5,center=true);
+    //    translate([-(box_side/2+1),knob_y_offset,20+7]) sphere($fn=30, r=1.5,center=true);
 }
+
+
+// the top of the container. It is designed to slide in and be held by friction only
 
 module housing_top() {
     intersection() {
@@ -212,7 +233,8 @@ module housing_top() {
 
 // brackets inside the housing hold the differential gear and create space for the flat gears
 module bracket() {
-    brack_xdim_slack=0.05; // give the bracket some slack inside the containing box or else it wedges too tight
+    brack_xdim_slack=0.2; // give the bracket some slack inside the containing box or else it wedges too tight
+    // slack of 0.05 was too tight. Trying 0.2
     brack_xdim = box_side/2 - diffassy_outer_radius - 1 - brack_xdim_slack;
     brack_zdim = 40 - 2 - 2;
     axlehole_extra_radius=0.2;
@@ -228,7 +250,12 @@ module bracket() {
     }
 }
 
+
+// 
 module knob() {
+    // how much slack does the axle hole get vs the axle itself
+    axle_slack=0.05;
+    axle_hole_height=5;
     difference() {
         cylinder($fn=60, r=10, h=10);
         union() {
@@ -238,17 +265,22 @@ module knob() {
                         cube([10, 20, 4], center=true);
                         rotate([90,0,0]) cylinder($fn=40, r=3, h=0.01);
                 }
-            translate([0,0,-0.01]) cylinder($fn=50, r=knob_axle_radius+0.05, h=5);
+            // hole for the axle
+            translate([0,0,-0.01]) cylinder($fn=6, r=knob_axle_radius+axle_slack, h=axle_hole_height);
             // a half-circle cutout
-            rotate_extrude($fn=80,angle=200, start=-10, convexity = 20) 
-                translate([7, 0, 0])
-                    circle($fn=80, r = 0.75);
+            //rotate_extrude($fn=80,angle=200, start=-10, convexity = 20) 
+            //    translate([7, 0, 0])
+            //        circle($fn=80, r = 0.75);
 
         }
     }
-    translate([0,10,0]) cylinder($fn=40,r=2, h=10);
+    // handle extension
+    translate([0,14,5]) cube([4, 12, 10], center=true);
+    translate([0,20,0]) cylinder($fn=40,r=2, h=10);
 }
 
+
+// show the assembly for visualization and debug purposes.
 
 module assembly() {
     knob_y_offset=+7;
@@ -260,8 +292,8 @@ module assembly() {
     // differential gear: cupolas, belt, gears
     color("blue") translate([0, diffgear_y_offset,   diffaxle_z_offset]) rotate([0,90,0]) diff_belt();    
     color("red")  translate([0, diffgear_y_offset,   diffaxle_z_offset]) rotate([180, 0,0 ]) diff_halfcupola();
-    color("cyan") translate([14,diffgear_y_offset,   diffaxle_z_offset]) rotate([0,90,0]) diff_gear_outside();
-    color("cyan") translate([0, -14+diffgear_y_offset,  diffaxle_z_offset]) rotate([90,0,0]) diff_gear_inside();
+    //color("cyan") translate([14,diffgear_y_offset,   diffaxle_z_offset]) rotate([0,90,0]) diff_gear_outside();
+    //color("cyan") translate([0, -14+diffgear_y_offset,  diffaxle_z_offset]) rotate([90,0,0]) diff_gear_inside();
 
     // flat gears
     color("cyan") translate([18.5, diffgear_y_offset,  diffaxle_z_offset]) rotate([0,90,0]) flat_gear_medium();
@@ -272,16 +304,8 @@ module assembly() {
     
 }
 
-module diff_allgears() {
-    for (x=[0,-25])
-        for (y=[0,25])
-            translate([x,y,0]) {
-                diff_gearwithhandle();
-                translate([50,0,0]) diff_gearwithhandle(handleheight=10);
-            }
-}
 
-
+// print every part
 
 module print_ready() {
     // differential gears
@@ -317,6 +341,12 @@ module print_ready() {
     translate([100, 70, 0]) housing_top();
 }
 
-//assembly();
-print_ready();
+// assembly();
+//print_ready();
 
+housing_bottom();
+
+difference() {
+    translate([27,knob_y_offset,diffaxle_z_offset/2-1]) cube([4, 25, diffaxle_z_offset-2], center=true);
+    translate([0,knob_y_offset,diffaxle_z_offset-2]) rotate([0,90,0]) cylinder($fn=40, r=10, h=100, center=true);
+}
