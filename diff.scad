@@ -19,7 +19,7 @@ knob_y_offset=7;
 
 module flat_gear(radius=6, teeth=12) {
     gear (number_of_teeth=teeth,
-    	  circular_pitch=radius*360/teeth,
+    	  circular_pitch=radius*6.28/teeth,
           diametral_pitch=false,
           pressure_angle=28,
           clearance = 0.2,
@@ -55,7 +55,10 @@ module flat_gear_medium_handle() {
 
 // the large and small gears mesh at distance 24
 module flat_gear_small() {
-    flat_gear(radius=5,teeth=10);
+    difference() {
+        flat_gear(radius=5,teeth=10);
+        cylinder($fn=6, r=2.2, h=10);
+    }
 }
 
 module flat_gear_large() {
@@ -173,33 +176,42 @@ module diff_belt() {
 module housing_bottom() {
     slack=0.1;
     knob_y_offset=+7;
+    // box with the holes in it
     intersection() {
         translate([0,0,20]) 
             minkowski() {
                 cube([box_side-2, box_side-2, 40], center=true);
                 cylinder($fn=30, h=0.001, r=2, center=true);
             }
-    difference() {
-        union() {
-            // box
-            translate([0,0,1]) cube([box_side,box_side,2], center=true);
+        difference() {
+            union() {
+                // box
+                translate([0,0,1]) cube([box_side,box_side,2], center=true);
                         
-            // outer walls
-            translate([-box_side/2,0,20]) cube([2, box_side+2, 40], center=true);
-            translate([box_side/2,0,20]) cube([2, box_side+2, 40], center=true);
+                // outer walls
+                translate([-box_side/2,0,20]) cube([2, box_side+2, 40], center=true);
+                translate([box_side/2,0,20]) cube([2, box_side+2, 40], center=true);
 
-            translate([0, box_side/2,20]) cube([box_side+2, 2, 40], center=true);
-            translate([0, -box_side/2,20]) cube([box_side+2, 2, 40], center=true);      
+                translate([0, box_side/2,20]) cube([box_side+2, 2, 40], center=true);
+                translate([0, -box_side/2,20]) cube([box_side+2, 2, 40], center=true);      
+            }
+            union() {
+                // holes for axles for driving knobs
+                translate([0,knob_y_offset,diffaxle_z_offset]) rotate([0,90,0]) cylinder($fn=20, r=knob_axle_radius+0.1, h=box_side+3, center=true);
+            }
         }
-        union() {
-            // holes for axles for driving knobs
-            translate([0,knob_y_offset,diffaxle_z_offset]) rotate([0,90,0]) cylinder($fn=20, r=knob_axle_radius+0.1, h=box_side+3, center=true);
+    }
+    
+    // support for limiting knob travel
+    for (x=[-1,1]) {
+        intersection() {
+            difference() {
+                translate([x*27,knob_y_offset,diffaxle_z_offset/2-1]) cube([4, 25, diffaxle_z_offset-2], center=true);
+                translate([0,knob_y_offset,diffaxle_z_offset-2]) rotate([0,90,0]) cylinder($fn=40, r=10, h=100, center=true);
+            }
+            translate([x*27,knob_y_offset,diffaxle_z_offset-2]) rotate([0,x*90,0]) cylinder($fn=100, r1= 16, r2=12, h=4, center=true);
         }
-    }}
-    // button to limit knob movement
-    // didn't work ot so disabled
-    //    translate([box_side/2+1,knob_y_offset,20+7]) sphere($fn=30, r=1.5,center=true);
-    //    translate([-(box_side/2+1),knob_y_offset,20+7]) sphere($fn=30, r=1.5,center=true);
+    }
 }
 
 
@@ -324,8 +336,8 @@ module print_ready() {
     
     // knobs
     
-    translate([50, 0, 0]) knob();
-    translate([50, 25, 0]) knob();
+    translate([50, 0, 0]) rotate([0,0,45]) knob();
+    translate([50, 25, 0]) rotate([0,0,45]) knob();
     
     // differential housing
     
@@ -342,11 +354,7 @@ module print_ready() {
 }
 
 // assembly();
-//print_ready();
+print_ready();
 
-housing_bottom();
 
-difference() {
-    translate([27,knob_y_offset,diffaxle_z_offset/2-1]) cube([4, 25, diffaxle_z_offset-2], center=true);
-    translate([0,knob_y_offset,diffaxle_z_offset-2]) rotate([0,90,0]) cylinder($fn=40, r=10, h=100, center=true);
-}
+
