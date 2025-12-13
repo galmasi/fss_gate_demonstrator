@@ -212,14 +212,25 @@ module diff_belt_textentry(text="0") {
 }
 
 
-module diff_belt_text() {
+module diff_belt_text(v0="0", v1="1", v2="1", v3="0") {
     diff_belt();
-    diff_belt_textentry(text="0");
-    rotate([0,0,90]) diff_belt_textentry(text="1");
-    rotate([0,0,135]) diff_belt_textentry(text="1");
-    rotate([0,0,225]) diff_belt_textentry(text="0");
+    diff_belt_textentry(text=v0);
+    rotate([0,0,90]) diff_belt_textentry(text=v1);
+    rotate([0,0,120]) diff_belt_textentry(text=v2);
+    rotate([0,0,210]) diff_belt_textentry(text=v3);
 }
 
+module diff_belt_xor() {
+    diff_belt_text("0", "1", "1", "0");
+}
+
+module diff_belt_and() {
+    diff_belt_text("0", "0", "0", "1");
+}
+
+module diff_belt_or() {
+    diff_belt_text("0", "1", "1", "1");
+}
 
 
 // *****************************************************
@@ -263,6 +274,11 @@ module housing_bottom() {
             translate([x*27,knob_y_offset,diffaxle_z_offset]) rotate([0,x*90,0]) cylinder($fn=100, r1= 16, r2=12, h=4, center=true);
         }
     }
+    
+    for (x=[-1,1])
+        for (y=[-1,1])
+            translate([x*box_side/2, knob_y_offset+y*11, 
+                diffaxle_z_offset+2.5]) sphere($fn=80,r=1.7);
     
     // text
     translate([box_side/2+1,box_side/2,box_height-10]) 
@@ -417,7 +433,7 @@ module print_ready() {
     translate([0, 50, 0]) flat_gear_medium();
     translate([25,50 ,0]) flat_gear_medium_handle();
     translate([50, 50, 0]) flat_gear_small();
-    translate([120,0 ,0]) flat_gear_large_handle();
+    translate([125,0 ,0]) flat_gear_large_handle();
     
     // knobs
     
@@ -428,7 +444,8 @@ module print_ready() {
     
     translate([0, 80, 0])  diff_clamshell();
     translate([50, 80, 0]) diff_clamshell();    
-    translate([85,0,5])    diff_belt();
+    translate([85,0,5])    diff_belt_xor();
+    translate([125,0,5])   diff_belt_or();
     
 
     // case and distancers
@@ -439,9 +456,5 @@ module print_ready() {
 }
 
 //assembly();
-//print_ready();
-
-diff_clamshell();
-translate([40,0,0]) diff_clamshell();
-translate([-40,0,5]) diff_belt_text();
+print_ready();
  
