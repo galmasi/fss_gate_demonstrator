@@ -160,21 +160,27 @@ module diff_clamshell() {
             rotate([0, 0, 0]) cylinder($fn=30, r=4, h=2*clamshell_outer_radius, center=true);
             rotate([90, 0, 0]) cylinder($fn=30, r=4, h=2*clamshell_outer_radius, center=true);
             rotate([0, 90, 0]) cylinder($fn=30, r=4, h=2*clamshell_outer_radius, center=true);
+            // a sort of almost-brim to improve ground adherence during printing
+            // not a functional requirement but improves printing outcomes
+            minkowski() {
+                cube([18, 18, 0.7], center=true);
+                cylinder($fn=40, r=6, h=0.7, center=true);
+            }
         }
         union() {
             intersection() {
                 sphere($fn=100,r=clamshell_inner_radius, center=true);
                 cube([2*diffgear_inner_radius, 2*diffgear_inner_radius, 2*diffgear_inner_radius], center=true);
             }
-            rotate([0, 0, 0]) cylinder($fn=30, r=2.1, h=2*clamshell_outer_radius+1, center=true);
+            // axle holes for the gears
             rotate([90, 0, 0]) cylinder($fn=30, r=2.1, h=2*clamshell_outer_radius+1, center=true);
             rotate([0, 90, 0]) cylinder($fn=30, r=2.1, h=2*clamshell_outer_radius+1, center=true);
+            // we only want half a sphere, so kill everything z<0
             translate([0,0,-25]) cube([50,50,50], center=true);
+            for (x=[-18,18])
+                for (y=[-18,18])
+                    translate([x,y,18]) cube([25, 25, 25], center=true);
         }
-    }
-    difference() {
-        cylinder($fn=30,r=20,h=0.1);
-        translate([0,0,-0.1]) cylinder($fn=30,r=clamshell_outer_radius,h=0.5);
     }
 }
 
@@ -196,6 +202,25 @@ module diff_belt() {
         }
     }
 }
+
+module diff_belt_textentry(text="0") {
+    translate([diffassy_belt_radius-0.25, 0, 0])
+    rotate([0,90,0])
+    translate([-3,-3,0])
+    linear_extrude(height=0.5)
+    text(text=text, size=6, font="Courier");
+}
+
+
+module diff_belt_text() {
+    diff_belt();
+    diff_belt_textentry(text="0");
+    rotate([0,0,90]) diff_belt_textentry(text="1");
+    rotate([0,0,135]) diff_belt_textentry(text="1");
+    rotate([0,0,225]) diff_belt_textentry(text="0");
+}
+
+
 
 // *****************************************************
 // housing: bottom end
@@ -414,7 +439,9 @@ module print_ready() {
 }
 
 //assembly();
-print_ready();
+//print_ready();
 
-
+diff_clamshell();
+translate([40,0,0]) diff_clamshell();
+translate([-40,0,5]) diff_belt_text();
  
