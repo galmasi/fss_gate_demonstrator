@@ -5,7 +5,7 @@ diffgear_inner_radius     = 14; // the sphere inside the clamshell where all the
 clamshell_inner_radius    = 15; // inner radius of the differential clamshell
 clamshell_outer_radius    = 16; // outer radius of the differential clamshell
 diffassy_belt_radius      = 18; // outer radius of the belt holding diff assembly together
-diffgear_axle_radius      =  2; // the dimension of the axle of all differential gears
+diffgear_axle_radius      =  3; // the dimension of the axle of all differential gears
 
 // holding box
 box_side                  = 50; // side length of entire box
@@ -19,6 +19,18 @@ diffaxle_z_offset         = 21; // z offset (height) of differential gear's axle
 knob_axle_radius          =  3; // the dimension of the axle of the control knobs
 knob_y_offset             =  7; // how much the knob is off center on the box
 
+// slack for diff assembly
+diffgear_inner_slack      = 0.1; // how much smaller the diff gears than the inner radius
+
+// slack for flat gear -> diff gear assembly
+diffgear_handle_conicity  = 0.05; // r2-r1 for diff gear handle
+diffgear_handle_slack     = 0.1; // how much larger than nominal is the flat gear axle hole
+
+// slack for flat gear -> knob assembly
+knob_axle_slack           = 0.1; // how much larger than nominal is the knob axle hole
+knob_axle_conicity        = 0.2; // knob axle r2-r1
+
+
 // *****************************************************
 // standard flat gear
 // *****************************************************
@@ -28,8 +40,8 @@ module flat_gear(radius=6, teeth=12) {
           diametral_pitch=false,
           pressure_angle=28,
           clearance = 0.2,
-          gear_thickness=5,
-          rim_thickness=5,
+          gear_thickness=4.75,
+          rim_thickness=4.75,
           rim_width=0,
           hub_thickness=2,
           hub_diameter=0,
@@ -47,7 +59,9 @@ module flat_gear(radius=6, teeth=12) {
 module flat_gear_medium() {
     difference() {        
         flat_gear(radius=6, teeth=12);
-        cylinder($fn=6, r=2.1, h=10);
+        crescent(r1=diffgear_axle_radius+diffgear_handle_slack,
+                 r2=diffgear_axle_radius+diffgear_handle_slack+diffgear_handle_conicity,
+                 h=10);
     }
 }
 
@@ -57,14 +71,18 @@ module flat_gear_medium() {
 module flat_gear_small() {
     difference() {
         flat_gear(radius=5,teeth=10);
-        cylinder($fn=6, r=2.1, h=10);
+        crescent(r1=diffgear_axle_radius+diffgear_handle_slack,
+                 r2=diffgear_axle_radius+diffgear_handle_slack+diffgear_handle_conicity,
+                 h=10);
     }
 }
 
 module flat_gear_large() {
     difference() {
         flat_gear(teeth=14, radius=7);
-        cylinder($fn=6, r=2.1, h=10);
+        crescent(r1=diffgear_axle_radius+diffgear_handle_slack,
+                 r2=diffgear_axle_radius+diffgear_handle_slack+diffgear_handle_conicity,
+                 h=10);
     }
 }
 
@@ -76,8 +94,9 @@ module flat_gear_large() {
 module flat_gear_medium_handle() {
     knob_hole_axle_height=5;
     flat_gear(radius=6, teeth=12);
-    cylinder($fn=40,r=knob_axle_radius,h=4+3);
-    cylinder($fn=6,r=knob_axle_radius,h=4+3+knob_hole_axle_height);
+    cylinder($fn=40,r=knob_axle_radius,h=7);
+    translate([0,0,7]) 
+    crescent(r1=knob_axle_radius,r2=knob_axle_radius-knob_axle_conicity,h=knob_hole_axle_height);
 }
 
 // *****************************************************
@@ -88,8 +107,9 @@ module flat_gear_medium_handle() {
 module flat_gear_large_handle() {
     knob_hole_axle_height=5;
     flat_gear(teeth=14, radius=7);
-    cylinder($fn=40,r=knob_axle_radius,h=4+3);
-    cylinder($fn=6,r=knob_axle_radius,h=4+3+knob_hole_axle_height);
+    cylinder($fn=40,r=knob_axle_radius,h=7);
+    translate([0,0,7])
+    crescent(r1=knob_axle_radius,r2=knob_axle_radius-knob_axle_conicity,h=knob_hole_axle_height);
 }
 
 // *****************************************************
@@ -114,9 +134,17 @@ module diff_gear () {
             backlash = 0, 
             involute_facets=8, 
             finish =0) ;
-        translate([0,0, diffgear_inner_radius]) sphere($fn=100, r=diffgear_inner_radius, center=true);
+        translate([0,0, diffgear_inner_radius]) sphere($fn=100, r=diffgear_inner_radius-diffgear_inner_slack, center=true);
     }
 }
+
+module crescent(r1,r2,h) {
+    union() {
+        cylinder($fn=3,r2=r2, r1=r1,h=h);
+        rotate([0,0,180]) cylinder($fn=3,r2=r2, r1=r1,h=h);
+    }
+}
+
 
 // *****************************************************
 // one pair of gears are completely inside the differential assembly
@@ -126,7 +154,7 @@ module diff_gear_inside() {
     handleheight=2;
     rotate([180,0,0]) {
         diff_gear();
-        translate([0,0,-handleheight]) cylinder($fn=30,r=diffgear_axle_radius, h=handleheight+1);
+        translate([0,0,-handleheight+0.5]) cylinder($fn=50,r=diffgear_axle_radius, h=handleheight+1);
     }
 }
 
@@ -140,8 +168,11 @@ module diff_gear_outside() {
     rotate([180,0,0]) {
         diff_gear();
         translate([0,0,-4]) cylinder($fn=30,r=diffgear_axle_radius, h=handleheight+1-4);
-        translate([0,0,-handleheight]) cylinder($fn=6,r=diffgear_axle_radius, h=handleheight+1);
-        
+//        translate([0,0,-handleheight]) cylinder($fn=6,r2=diffgear_axle_radius, r1=diffgear_axle_radius-diffgear_handle_conicity,h=handleheight+1-4);
+        translate([0,0,-handleheight])
+            crescent(r1=diffgear_axle_radius-diffgear_handle_conicity,
+                     r2=diffgear_axle_radius,
+                     h=handleheight+1-4);
     }
 }
 
@@ -157,24 +188,26 @@ module diff_clamshell() {
             // clamshell sphere
             sphere($fn=100,r=clamshell_outer_radius,center=true);
             // flat surfaces of diameter 8mm on x-,x+,y-,y+,z-,z+
-            rotate([0, 0, 0]) cylinder($fn=30, r=4, h=2*clamshell_outer_radius, center=true);
-            rotate([90, 0, 0]) cylinder($fn=30, r=4, h=2*clamshell_outer_radius, center=true);
-            rotate([0, 90, 0]) cylinder($fn=30, r=4, h=2*clamshell_outer_radius, center=true);
+            rotate([0, 0, 0]) cylinder($fn=30, r=4.5, h=2*clamshell_outer_radius-1, center=true);
+            rotate([90, 0, 0]) cylinder($fn=30, r=4.5, h=2*clamshell_outer_radius, center=true);
+            rotate([0, 90, 0]) cylinder($fn=30, r=4.5, h=2*clamshell_outer_radius-1, center=true);
+            rotate([90,0,0]) cylinder($fn=100,h=8,r=clamshell_outer_radius,center=true);
+            
             // a sort of almost-brim to improve ground adherence during printing
             // not a functional requirement but improves printing outcomes
             minkowski() {
-                cube([18, 18, 0.7], center=true);
+                cube([19.5, 19.5, 0.7], center=true);
                 cylinder($fn=40, r=6, h=0.7, center=true);
             }
         }
         union() {
             intersection() {
-                sphere($fn=100,r=clamshell_inner_radius, center=true);
-                cube([2*diffgear_inner_radius, 2*diffgear_inner_radius, 2*diffgear_inner_radius], center=true);
+                sphere($fn=100,r=clamshell_inner_radius+0.1, center=true);
+                cube([2*diffgear_inner_radius+0.1, 2*diffgear_inner_radius+0.1, 2*diffgear_inner_radius+0.1], center=true);
             }
             // axle holes for the gears
-            rotate([90, 0, 0]) cylinder($fn=30, r=2.1, h=2*clamshell_outer_radius+1, center=true);
-            rotate([0, 90, 0]) cylinder($fn=30, r=2.1, h=2*clamshell_outer_radius+1, center=true);
+            rotate([90, 0, 0]) cylinder($fn=30, r=diffgear_axle_radius+0.1, h=2*clamshell_outer_radius+1, center=true);
+            rotate([0, 90, 0]) cylinder($fn=30, r=diffgear_axle_radius+0.1, h=2*clamshell_outer_radius+1, center=true);
             // we only want half a sphere, so kill everything z<0
             translate([0,0,-25]) cube([50,50,50], center=true);
             for (x=[-18,18])
@@ -191,14 +224,15 @@ module diff_clamshell() {
 // *****************************************************
 
 module diff_belt() {
-    slack = 0.30;
+    slack = 0.20;
     difference() {
         cylinder($fn=100, r=diffassy_belt_radius, h=10, center=true);
         union() {
-            sphere($fn=100,r=clamshell_outer_radius+slack, center=true);
-            cube([2*(clamshell_outer_radius+slack), 8, 16], center=true);
-            cube([8, 2*(clamshell_outer_radius+slack), 16], center=true);
-            cylinder($fn=100,r=clamshell_outer_radius-slack,h=100,center=true);
+            cylinder($fn=100,r=clamshell_outer_radius+slack,h=12,center=true);
+//            sphere($fn=100,r=clamshell_outer_radius+slack, center=true);
+//            cube([2*(clamshell_outer_radius+slack), 8, 16], center=true);
+//            cube([8, 2*(clamshell_outer_radius+slack), 16], center=true);
+//            cylinder($fn=100,r=clamshell_outer_radius-slack,h=100,center=true);
         }
     }
 }
@@ -281,22 +315,22 @@ module housing_bottom() {
                 diffaxle_z_offset+2.5]) sphere($fn=80,r=1.7);
     
     // text
-    translate([box_side/2+1,box_side/2,box_height-10]) 
+    translate([box_side/2+1,box_side/2,3]) 
         rotate([0,-90,0])
             rotate([0,0,-90])
                 linear_extrude(height=1, center=true)
                     text(text="0", size=10, font="Courier");
-    translate([-box_side/2-1,box_side/2,box_height-10]) 
+    translate([-box_side/2-1,box_side/2,3]) 
         rotate([0,-90,0])
             rotate([0,0,-90]) 
                 linear_extrude(height=1, center=true)
                     text(text="0", size=10, font="Courier");
-    translate([box_side/2+1,-10,box_height-10]) 
+    translate([box_side/2+1,-10,3]) 
         rotate([0,90,0])
             rotate([0,0,90]) 
                 linear_extrude(height=1, center=true)
                     text(text="1", size=10, font="Courier");
-    translate([-box_side/2-1,0,box_height-10]) 
+    translate([-box_side/2-1,-3,3]) 
         rotate([0,-90,0])
             rotate([0,0,-90]) 
                 linear_extrude(height=1, center=true)
@@ -340,13 +374,14 @@ module housing_top() {
 module bracket() {
     brack_xdim_slack=0.2; // give the bracket some slack inside the containing box or else it wedges too tight
     // slack of 0.05 was too tight. Trying 0.2
+    brack_ydim_slack=0.2; // lengthwise slack for the bracket
     brack_xdim = box_side/2 - clamshell_outer_radius - 1 - brack_xdim_slack;
     brack_zdim = 40 - 2 - 2;
     axlehole_extra_radius=0.2;
     difference() {
         union() {
-            translate([0,0,20-2]) cube([2, box_side-2-2, brack_zdim], center=true);
-            translate([brack_xdim/2-1,box_side/2-2,20-2]) cube([brack_xdim, 2, brack_zdim], center=true);
+            translate([0,0,20-2]) cube([2, box_side-2-2-brack_ydim_slack, brack_zdim], center=true);
+            translate([brack_xdim/2-1,box_side/2-2-brack_ydim_slack,20-2]) cube([brack_xdim, 2, brack_zdim], center=true);
             translate([brack_xdim/2-1,-box_side/2+2,20-2]) cube([brack_xdim, 2, brack_zdim], center=true);
         }
         // holes for gear axles coming from differential
@@ -362,7 +397,6 @@ module bracket() {
 
 module knob() {
     // how much slack does the axle hole get vs the axle itself
-    axle_slack=0.05;
     axle_hole_height=5;
     difference() {
         cylinder($fn=60, r=10, h=10);
@@ -374,12 +408,9 @@ module knob() {
                         rotate([90,0,0]) cylinder($fn=40, r=3, h=0.01);
                 }
             // hole for the axle
-            translate([0,0,-0.01]) cylinder($fn=6, r=knob_axle_radius+axle_slack, h=axle_hole_height);
-            // a half-circle cutout
-            //rotate_extrude($fn=80,angle=200, start=-10, convexity = 20) 
-            //    translate([7, 0, 0])
-            //        circle($fn=80, r = 0.75);
-
+            translate([0,0,-0.01]) crescent(r1=knob_axle_radius+knob_axle_slack, 
+                                            r2=knob_axle_radius+knob_axle_slack+knob_axle_conicity, 
+                                            h=axle_hole_height);
         }
     }
     // handle extension
@@ -433,7 +464,7 @@ module print_ready() {
     translate([0, 50, 0]) flat_gear_medium();
     translate([25,50 ,0]) flat_gear_medium_handle();
     translate([50, 50, 0]) flat_gear_small();
-    translate([125,0 ,0]) flat_gear_large_handle();
+    translate([75,0 ,0]) flat_gear_large_handle();
     
     // knobs
     
@@ -444,8 +475,8 @@ module print_ready() {
     
     translate([0, 80, 0])  diff_clamshell();
     translate([50, 80, 0]) diff_clamshell();    
-    translate([85,0,5])    diff_belt_xor();
-    translate([125,0,5])   diff_belt_or();
+    translate([110,0,5])    diff_belt_and();
+    //translate([110,0,5])   diff_belt_or();
     
 
     // case and distancers
@@ -457,4 +488,3 @@ module print_ready() {
 
 //assembly();
 print_ready();
- 
