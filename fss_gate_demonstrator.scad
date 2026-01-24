@@ -397,7 +397,7 @@ module bracket() {
 
 module knob() {
     // how much slack does the axle hole get vs the axle itself
-    axle_hole_height=5;
+    axle_hole_height=6;
     difference() {
         cylinder($fn=60, r=10, h=10);
         union() {
